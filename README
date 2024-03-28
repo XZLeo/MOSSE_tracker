@@ -1,6 +1,8 @@
 RUN MOSSE TEST
 
-You need to download the otb_mini dataset first.
+You need to download the otb_mini dataset here (my google drive)
+
+https://drive.google.com/drive/folders/1XzY7BJl7cElJekbq4eWk72EBxKVwp-y6?usp=sharing
 
 $ python test_mosse.py
 

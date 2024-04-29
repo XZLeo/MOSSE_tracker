@@ -17,9 +17,10 @@ from cvl.trackers import NCCTracker, MoSSETracker, MoSSETrackerDeepFeature
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser('Args for the tracker')
-    parser.add_argument('--sequences',nargs="+",default=[4],type=int)   #3,4,5
+    parser.add_argument('--sequences',nargs="+",default=[4],type=int)   #3,4,5 # takes more than 1 sequences
     parser.add_argument('--dataset_path',type=str,default="./otb_mini")
     parser.add_argument('--show_tracking',action='store_true',default=True)
+    parser.add_argument('--tracker', choices=['grey', 'RGB', 'Deep', 'manual'], help='Select a tracker with different features')
     args = parser.parse_args()
 
     dataset_path,SHOW_TRACKING,sequences = args.dataset_path,args.show_tracking,args.sequences
@@ -31,7 +32,16 @@ if __name__ == "__main__":
 
         if SHOW_TRACKING:
             cv2.namedWindow("tracker")
-        tracker = MoSSETracker()
+        
+        if args.tracker == 'grey':
+            tracker = NCCTracker()
+        elif args.tracker == 'RGB':
+            tracker = MoSSETracker()
+        elif args.tracker == 'Deep':
+            tracker = MoSSETrackerDeepFeature
+        else:
+            pass
+        
         pred_bbs = []
         for frame_idx, frame in tqdm(enumerate(a_seq), leave=False):
             image_color = frame['image']
@@ -39,7 +49,7 @@ if __name__ == "__main__":
             # image = np.sum(image_color, 2) / 3      # sum over axis 2 (RGB) = (R+G+B)/3 (single channel)
             # image = image[:,:,None]
             if frame_idx == 0:
-                bbox = frame['bounding_box']
+                bbox = frame['bounding_box'] # GND
                 if bbox.width % 2 == 0:
                     bbox.width += 1
 

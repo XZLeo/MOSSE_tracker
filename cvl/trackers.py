@@ -5,6 +5,7 @@ from copy import copy
 import matplotlib.pyplot as plt
 from skimage.transform import resize
 from cvl.features_resnet import DeepFeatureExtractor
+from cvl.features_HOG import HOGFeatureExtractor
 
 class NCCTracker:
 
@@ -123,6 +124,12 @@ class MoSSETracker:
 
 
     def start(self, image, region):
+        """_summary_
+
+        Args:
+            image (_type_): RGB image
+            region (_type_): bounding boxes
+        """
         # assert len(image.shape) == 2, "NCC is only defined for grayscale images"
 
         self.num_channels = image.shape[2]  # Number of input channels
@@ -172,11 +179,6 @@ class MoSSETracker:
         return self.get_region()
 
     def update(self, image, lr=0.1):
-        # assert len(image.shape) == 2, "NCC is only defined for grayscale images"
-        # patch = self.get_normalized_patch(image)
-        # patchf = fft2(patch)
-        # self.template = self.template * (1 - lr) + patchf * lr
-
         for channel in range (self.num_channels):
             patch = self.get_normalized_patch(image[:,:,channel])
             
@@ -355,3 +357,100 @@ class MoSSETrackerDeepFeature:
             self.learned_filters[channel] = learned_filter
             self.A_ts[channel] = A_t
             self.B_ts[channel] = B_t
+            
+            
+class MoSSETrackerManual(MoSSETracker):
+    def __init__(self, learning_rate=0.05, filter_type:str='HOG'):
+        super().__init__(learning_rate)
+        self.feature_extractor = HOGFeatureExtractor()
+        
+    def start(self, image, region):
+        # assert len(image.shape) == 2, "NCC is only defined for grayscale images"
+
+        # self.num_channels = image.shape[2]  # Number of input channels
+        # CROP REGION OUT OF IMAGE
+        self.region = copy(region)
+        self.region_shape = (region.height, region.width)
+        self.region_center = (region.height // 2, region.width // 2)   
+
+        self.image_channels = image.shape[2]
+
+        region = self.region
+        img_patch = crop_patch2(image, region, self.image_channels)
+        self.patch_deep_features = self._extract_manual_feature(img_patch)
+        patches = self.patch_deep_features
+        
+        for channel in range (self.num_channels):                
+            self.template = fft2(patches[:,:,channel])               # Transform each channel to Fourier domain
+            F = self.template                                        # Compute F for each channel
+            G = self._get_G_manual_feature(self.feature_size)               # Create Gaussian distribution for each channel???
+            A_t = G * np.conj(F)
+            B_t = F * np.conj(F) 
+            learned_filter = A_t / B_t                   # Compute filter H* for each channels
+            self.learned_filters.append(learned_filter)             # Store initialized filrer for all channels
+            self.A_ts.append(A_t)                                   # Store A0 and B0 for all channels
+            self.B_ts.append(B_t)
+        
+    def _extract_manual_feature(self, img_patch):
+        """ Input: image
+            Output: array converted from feature tensors (W,H,C)"""
+        img_patch = resize(img_patch, (224, 224))
+
+        # Extract features from manually designed filters
+        manual_features = self.feature_extractor.forward(img_patch)
+
+        # number of deep feature channels and feature size
+        self.num_channels = manual_features.shape[2] #? reshape accordingly!!
+        print('number of deep feature channels: %d' %self.num_channels)
+        self.feature_size = (manual_features.shape[0], manual_features.shape[1])
+        return manual_features
+    
+    def _get_G_manual_feature(self, feature_size):
+        width = feature_size[1]
+        height = feature_size[0]
+        cen_col = width // 2
+        cen_row = height // 2
+        target_score_map = np.array([
+            [self._gaussian2(col - cen_col, 
+                            row - cen_row, self.sigma) 
+                            for col in range(width)]
+            for row in range(height)])
+        # plt.imshow(target_score_map)
+        # plt.show()
+        return fft2(target_score_map)
+    
+    def detect(self, image):
+        region = self.region
+        img_patch = crop_patch2(image, region, self.image_channels)
+        self.patch_deep_features = self._extract_deep_feature(img_patch)
+
+        patches = self.patch_deep_features
+
+        for channel in range(self.num_channels):
+            
+            # patch = self.get_normalized_patch()   # Get patch for one channel
+            
+            patchf = fft2(patches[:,:,channel])
+
+            responsef = patchf * (self.learned_filters[channel])    # Compute responsef for each channel
+            response = ifft2(responsef).real
+            self.responses.append(response)
+        
+        res = np.sum(self.responses, axis=0)                        # Compute sum of response along each channel
+                                                                    # Axis = 0 because self.responses is a list of response
+        res = resize(res, (self.region.height, self.region.width))
+
+        r, c = np.unravel_index(np.argmax(res), res.shape)
+
+            # Keep for visualisation
+        self.last_response = res
+
+        r_offset = round(r - self.region.height/2)
+        c_offset = round(c - self.region.width/2)
+
+        self.region.xpos += c_offset
+        self.region.ypos += r_offset
+
+        return self.get_region()
+    
+    

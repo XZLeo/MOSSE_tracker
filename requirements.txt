@@ -2,7 +2,7 @@ torch==1.13.1
 torchvision==0.14.1
 numpy==1.21.6
 scipy==1.7.3
-opencv-python==4.9.0
+opencv-python==4.9.0.80
 pillow
 matplotlib
 tqdm

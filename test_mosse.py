@@ -8,10 +8,10 @@ Updated MOSSE Tracker: Bao-Long (2024)
 import argparse
 import cv2
 
-import numpy as np
+# import numpy as np
 from tqdm import tqdm
 from cvl.dataset import OnlineTrackingBenchmark
-from cvl.trackers import NCCTracker, MoSSETracker, MoSSETrackerDeepFeature, MoSSETrackerManual #, MoSSETrackerColor
+from cvl.trackers import NCCTracker, MoSSETracker, MoSSETrackerDeepFeature, MoSSETrackerManual, MoSSETrackerColor
 
 
 
@@ -42,7 +42,7 @@ if __name__ == "__main__":
         elif args.tracker == 'HOG':
             tracker = MoSSETrackerManual()
         else:
-            # tracker = MoSSETrackerColor()
+            tracker = MoSSETrackerColor()
             pass
         
         pred_bbs = []

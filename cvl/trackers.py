@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 from skimage.transform import resize
 from cvl.features_resnet import DeepFeatureExtractor
 from cvl.features_HOG import HOGFeatureExtractor
+from cvl.features import colornames_image
 
 class NCCTracker:
 
@@ -122,7 +123,6 @@ class MoSSETracker:
         
         return fft2(target_score_map)
 
-
     def start(self, image, region):
         """_summary_
 
@@ -193,7 +193,6 @@ class MoSSETracker:
             self.learned_filters[channel] = learned_filter
             self.A_ts[channel] = A_t
             self.B_ts[channel] = B_t
-
 
 class MoSSETrackerDeepFeature:
 
@@ -356,8 +355,7 @@ class MoSSETrackerDeepFeature:
             self.learned_filters[channel] = learned_filter
             self.A_ts[channel] = A_t
             self.B_ts[channel] = B_t
-            
-            
+                  
 class MoSSETrackerManual(MoSSETracker):
     def __init__(self, learning_rate=0.1, filter_type:str='HOG'):
         super().__init__(learning_rate)
@@ -475,5 +473,21 @@ class MoSSETrackerManual(MoSSETracker):
             self.A_ts[channel] = A_t
             self.B_ts[channel] = B_t
         return
+    
+class MoSSETrackerColor(MoSSETracker):
+    def start(self, image, region):
+        color_image = colornames_image(image) 
+        return super().start(color_image, region)
+
+    def detect(self, image):
+        color_image = colornames_image(image)
+        return super().detect(color_image)
+    
+    def update(self, image, lr=0.1):
+        color_image = colornames_image(image)
+        return super().update(color_image, lr)
+    
+    
+    
     
     

@@ -11,7 +11,7 @@ import cv2
 import numpy as np
 from tqdm import tqdm
 from cvl.dataset import OnlineTrackingBenchmark
-from cvl.trackers import NCCTracker, MoSSETracker, MoSSETrackerDeepFeature
+from cvl.trackers import NCCTracker, MoSSETracker, MoSSETrackerDeepFeature, MoSSETrackerManual #, MoSSETrackerColor
 
 
 
@@ -19,8 +19,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser('Args for the tracker')
     parser.add_argument('--sequences',nargs="+",default=[4],type=int)   #3,4,5 # takes more than 1 sequences
     parser.add_argument('--dataset_path',type=str,default="./otb_mini")
-    parser.add_argument('--show_tracking',action='store_true',default=True)
-    parser.add_argument('--tracker', choices=['grey', 'RGB', 'Deep', 'manual'], help='Select a tracker with different features')
+    parser.add_argument('--show_tracking',action='store_true')
+    parser.add_argument('--tracker', choices=['grey', 'RGB', 'Deep', 'HOG', 'color'], help='Select a tracker with different features')
     args = parser.parse_args()
 
     dataset_path,SHOW_TRACKING,sequences = args.dataset_path,args.show_tracking,args.sequences
@@ -38,8 +38,11 @@ if __name__ == "__main__":
         elif args.tracker == 'RGB':
             tracker = MoSSETracker()
         elif args.tracker == 'Deep':
-            tracker = MoSSETrackerDeepFeature
+            tracker = MoSSETrackerDeepFeature()
+        elif args.tracker == 'HOG':
+            tracker = MoSSETrackerManual()
         else:
+            # tracker = MoSSETrackerColor()
             pass
         
         pred_bbs = []
@@ -61,7 +64,7 @@ if __name__ == "__main__":
                 frame['bounding_box']
             else:
                 tracker.detect(image)
-                tracker.update(image)
+                tracker.update()
             pred_bbs.append(tracker.get_region())
 
             if SHOW_TRACKING:

@@ -133,3 +133,4 @@ roi.png
 
 # Ignore my draft
 draft.py
+result_vis*

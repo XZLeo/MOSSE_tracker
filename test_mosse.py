@@ -8,7 +8,6 @@ Updated MOSSE Tracker: Bao-Long (2024)
 import argparse
 import cv2
 
-# import numpy as np
 from tqdm import tqdm
 from cvl.dataset import OnlineTrackingBenchmark
 from cvl.trackers import NCCTracker, MoSSETracker, MoSSETrackerDeepFeature, MoSSETrackerManual, MoSSETrackerColor
@@ -20,6 +19,7 @@ if __name__ == "__main__":
     parser.add_argument('--sequences',nargs="+",default=[4],type=int)   #3,4,5 # takes more than 1 sequences
     parser.add_argument('--dataset_path',type=str,default="./otb_mini")
     parser.add_argument('--show_tracking',action='store_true')
+    parser.add_argument('--save_tracking',action='store_true')
     parser.add_argument('--tracker', choices=['grey', 'RGB', 'Deep', 'HOG', 'color'], help='Select a tracker with different features')
     args = parser.parse_args()
 
@@ -49,8 +49,6 @@ if __name__ == "__main__":
         for frame_idx, frame in tqdm(enumerate(a_seq), leave=False):
             image_color = frame['image']
             image = image_color                       # R,G,B (multi channel)                
-            # image = np.sum(image_color, 2) / 3      # sum over axis 2 (RGB) = (R+G+B)/3 (single channel)
-            # image = image[:,:,None]
             if frame_idx == 0:
                 bbox = frame['bounding_box'] # GND
                 if bbox.width % 2 == 0:
@@ -61,14 +59,15 @@ if __name__ == "__main__":
 
                 current_position = bbox             # Position information: xpos, ypos, xcen, ycen, width, height,...
                 tracker.start(image, bbox)
-                frame['bounding_box']
             else:
                 tracker.detect(image)
-                tracker.update()
+                if args.tracker in ('grey', 'RGB', 'color'):
+                    tracker.update(image)
+                else:
+                    tracker.update()
             pred_bbs.append(tracker.get_region())
 
             if SHOW_TRACKING:
-            # if  frame_idx == 0 or frame_idx==10 or frame_idx==50 or frame_idx==100 or frame_idx==150 or frame_idx==200:
                 bbox = tracker.get_region()
                 pt0 = (bbox.xpos, bbox.ypos)
                 pt1 = (bbox.xpos + bbox.width, bbox.ypos + bbox.height)
@@ -77,7 +76,9 @@ if __name__ == "__main__":
                                           fontFace= cv2.FONT_HERSHEY_SIMPLEX, fontScale=1,
                                           color=(255,255,255), thickness=3)
                 cv2.rectangle(image_color, pt0, pt1, color=(0, 255, 0), thickness=3)
-                # cv2.imwrite('./result_vis/data_%d_frame_%d.png' %(sequence_idx, frame_idx), image_color)
+                if args.save_tracking:
+                    if frame_idx in (0, 10, 50, 100, 150, 200):
+                        cv2.imwrite('./result_vis/data_%d_frame_%d.png' %(sequence_idx, frame_idx), image_color)
                 cv2.imshow("tracker", image_color)
                 cv2.waitKey(0)
         sequence_ious = dataset.calculate_per_frame_iou(sequence_idx, pred_bbs)

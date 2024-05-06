@@ -13,7 +13,7 @@
             "args": [
                 "--sequences", "2", 
                 "--dataset_path", "./otb_mini", 
-                "--tracker", "RGB"
+                "--tracker", "color"
             ],
             "env": {"PYTHONPATH": "${workspaceFolder}${pathSeparator}${env:PYTHONPATH}"}
         }
